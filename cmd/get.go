@@ -39,6 +39,14 @@ func (self *Get) Cmd() cli.Command {
 
 func (self *Get) Run(ctx *gpm.Ctx) {
 	ctx.Debug("get")
+	ctx.Load()
+	for _, name := range ctx.Args() {
+		ctx.Conf.AddDependency(name)
+	}
+
+	ctx.Conf.Save()
+
+	// get and update??
 }
 
 // Get 获取代码

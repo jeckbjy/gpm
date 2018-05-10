@@ -35,7 +35,16 @@ func (ctx *Ctx) init() {
 	ctx.WorkDir = wd
 
 	// 尝试加载配置文件
-	if ctx.Conf.Exist() {
-		ctx.Conf.Load()
+	// if ctx.Conf.Exist() {
+	// 	ctx.Conf.Load()
+	// }
+}
+
+func (ctx *Ctx) Load() {
+	// 确保配置文件正常加载
+	if !ctx.Conf.Exist() {
+		ctx.Die("can not load cfg:%+v", ctx.Conf.ConfigPath())
 	}
+
+	ctx.Conf.Load()
 }

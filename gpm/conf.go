@@ -25,15 +25,26 @@ type Owner struct {
 
 // Dependency describes a package that the present package depends upon.
 type Dependency struct {
-	Name       string   `yaml:package`
-	Version    string   `yaml:version,omitempty` // Version
-	Pin        string   `yaml:"-"`               // Version fot lock
-	Repository string   `yaml:repo,omitempty`
-	VCS        string   `yaml:vcs,omitempty`
-	Arch       []string `yaml:arch,omitempty`
-	Os         []string `yaml:os,omitempty`
+	Name       string   `yaml:"package"`
+	Version    string   `yaml:"version,omitempty"` // Version
+	Pin        string   `yaml:"-"`                 // Version fot lock
+	Repository string   `yaml:"repo,omitempty"`
+	VCS        string   `yaml:"vcs,omitempty"`
+	Arch       []string `yaml:"arch,omitempty"`
+	Os         []string `yaml:"os,omitempty"`
 }
 
+// Parse name and version
+func (d *Dependency) Parse() {
+	parts := strings.Split(d.Name, "#")
+	if len(parts) > 1 {
+		d.Name = parts[0]
+		d.Version = parts[1]
+	}
+}
+
+// Remote returns the remote location to fetch source from. This location is
+// the central place where mirrors can alter the location.
 func (d *Dependency) Remote() string {
 	var r string
 
@@ -76,22 +87,35 @@ func (cfg *Config) SetPath(dir string) {
 	}
 }
 
+func (cfg *Config) ConfigPath() string {
+	return cfg.Path + ConfName
+}
+
 // Exist 判断配置文件是否存在
 func (cfg *Config) Exist() bool {
-	filename := cfg.Path + ConfName
+	filename := cfg.ConfigPath()
 	_, err := os.Stat(filename)
 	return err == nil
 }
 
 // Load 加载配置文件
 func (cfg *Config) Load() error {
-	filename := cfg.Path + ConfName
+	filename := cfg.ConfigPath()
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
 
-	return yaml.Unmarshal(data, cfg)
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return err
+	}
+
+	// parse name and version
+	for _, dep := range cfg.Imports {
+		dep.Parse()
+	}
+
+	return nil
 }
 
 // Save 保存配置文件
@@ -103,4 +127,28 @@ func (cfg *Config) Save() error {
 
 	filename := cfg.Path + ConfName
 	return ioutil.WriteFile(filename, data, 0666)
+}
+
+// HasDependency returns true if the given name is listed as an import or dev import.
+func (cfg *Config) HasDependency(name string) bool {
+	for _, d := range cfg.Imports {
+		if d.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AddDependency returns true if the given name is listed as an import or dev import.
+func (cfg *Config) AddDependency(name string) bool {
+	if cfg.HasDependency(name) {
+		return false
+	}
+
+	dep := &Dependency{Name: name}
+	dep.Parse()
+	cfg.Imports = append(cfg.Imports, dep)
+
+	return true
 }
