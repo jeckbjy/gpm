@@ -3,13 +3,16 @@ package gpm
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
-const VendorDir = "vendor"
-const ConfFile = "gpm.yaml"
-const LockFile = "gpm.lock"
+const (
+	VendorName = "vendor"
+	ConfName   = "gpm.yaml"
+	LockName   = "gpm.lock"
+)
 
 // Owner describes an owner of a package. This can be a person, company, or
 // other organization. This is useful if someone needs to contact the
@@ -51,21 +54,39 @@ type Config struct {
 	License string        `yaml:"license,omitempty"`
 	Owners  []*Owner      `yaml:"owners,omitempty"`
 	Imports []*Dependency `yaml:"import"`
+	Path    string        `yaml:"-"` // 配置文件所在目录
+}
+
+func NewConfig() *Config {
+	cfg := &Config{}
+	cfg.Init()
+	return cfg
+}
+
+// Init 初始化
+func (cfg *Config) Init() {
+	cfg.Name = "."
+}
+
+func (cfg *Config) SetPath(dir string) {
+	if !strings.HasSuffix(dir, "/") {
+		cfg.Path = dir + "/"
+	} else {
+		cfg.Path = dir
+	}
 }
 
 // Exist 判断配置文件是否存在
 func (cfg *Config) Exist() bool {
-	_, err := os.Stat(ConfFile)
+	filename := cfg.Path + ConfName
+	_, err := os.Stat(filename)
 	return err == nil
-}
-
-// Create 初始化信息
-func (cfg *Config) Create() {
 }
 
 // Load 加载配置文件
 func (cfg *Config) Load() error {
-	data, err := ioutil.ReadFile(ConfFile)
+	filename := cfg.Path + ConfName
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -80,5 +101,6 @@ func (cfg *Config) Save() error {
 		return err
 	}
 
-	return ioutil.WriteFile(ConfFile, data, 0666)
+	filename := cfg.Path + ConfName
+	return ioutil.WriteFile(filename, data, 0666)
 }

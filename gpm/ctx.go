@@ -15,14 +15,13 @@ type Ctx struct {
 	RootDir  string
 	CacheDir string
 	GOPATH   string
-	Args     []string
 }
 
 // NewCtx create context
 func NewCtx() *Ctx {
 	ctx := &Ctx{}
 	ctx.Logger = NewLogger()
-	ctx.Conf = &Config{}
+	ctx.Conf = NewConfig()
 	ctx.init()
 	return ctx
 }
@@ -34,4 +33,9 @@ func (ctx *Ctx) init() {
 	}
 
 	ctx.WorkDir = wd
+
+	// 尝试加载配置文件
+	if ctx.Conf.Exist() {
+		ctx.Conf.Load()
+	}
 }

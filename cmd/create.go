@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/codegangsta/cli"
 	"github.com/jeckbjy/gpm/gpm"
 )
@@ -24,36 +26,26 @@ func (self *Create) Cmd() cli.Command {
 }
 
 func (self *Create) Run(ctx *gpm.Ctx) {
-	if ctx.Conf.Exist() {
-		ctx.Die("Cowardly refusing to overwrite existing YAML.")
+	if len(ctx.Args()) > 1 {
+		ctx.Die("don't support")
+		return
+	}
+
+	if len(ctx.Args()) == 1 {
+		// 在子目录创建./src/xxx/xxx
+		dir := ctx.Args()[0]
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			ctx.Die("can not create path")
+		}
+
+		ctx.Conf.SetPath(dir)
+	} else {
+		// 在当前目录创建
+		if ctx.Conf.Exist() {
+			ctx.Die("Cowardly refusing to overwrite existing YAML.")
+		}
 	}
 
 	ctx.Info("Writing configuration")
-	ctx.Conf.Create()
 	ctx.Conf.Save()
 }
-
-// Create 创建配置文件
-// func Create() {
-// 	// if conf.Exist() {
-// 	// 	msg.Die("Cowardly refusing to overwrite existing YAML.")
-// 	// }
-
-// 	// msg.Info("Writing configuration")
-// 	// cfg := conf.New()
-// 	// cfg.Save()
-// }
-
-// func buildConfig(base string) *conf.Config {
-// 	builder, err := util.GetBuildContext()
-// 	if err != nil {
-// 		msg.Die("Failed to build an import context: %s", err)
-// 	}
-
-// 	name := builder.PackageName(base)
-
-// 	config := new(conf.Config)
-// 	config.Name = name
-
-// 	return config
-// }

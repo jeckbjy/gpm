@@ -38,7 +38,7 @@ func (self *Get) Cmd() cli.Command {
 }
 
 func (self *Get) Run(ctx *gpm.Ctx) {
-
+	ctx.Debug("get")
 }
 
 // Get 获取代码

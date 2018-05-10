@@ -17,4 +17,5 @@ func (self *Build) Cmd() cli.Command {
 }
 
 func (self *Build) Run(ctx *gpm.Ctx) {
+	ctx.Debug("Build")
 }

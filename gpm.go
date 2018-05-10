@@ -36,11 +36,14 @@ func main() {
 	// setup commands
 	cmds := cmd.New()
 	for _, c := range cmds {
+		action := c
 		cliCmd := c.Cmd()
 		cliCmd.Action = func(cliCtx *cli.Context) error {
 			ctx := gpm.NewCtx()
 			ctx.Context = cliCtx
-			c.Run(ctx)
+
+			ctx.Debug("run cmd:%+s", cliCtx.Command.Name)
+			action.Run(ctx)
 			return nil
 		}
 

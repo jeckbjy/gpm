@@ -18,4 +18,5 @@ func (self *Update) Cmd() cli.Command {
 }
 
 func (self *Update) Run(ctx *gpm.Ctx) {
+	ctx.Debug("Update")
 }

@@ -70,6 +70,7 @@ func (l *Logger) Output(level int, msg string, args ...interface{}) {
 	name := zLogName[level]
 	fmt.Printf("[%s]\t", name)
 	fmt.Printf(msg, args...)
+	fmt.Println("")
 }
 
 // Print prints exactly the string given.
@@ -95,11 +96,11 @@ func (l *Logger) Puts(msg string, args ...interface{}) {
 }
 
 func (l *Logger) Die(msg string, args ...interface{}) {
-	l.Exit(0, msg, args)
+	l.Exit(0, msg, args...)
 }
 
 func (l *Logger) Exit(code int, msg string, args ...interface{}) {
-	l.Error(msg, args)
+	l.Error(msg, args...)
 
 	if l.PanicOnDie {
 		panic("trapped")

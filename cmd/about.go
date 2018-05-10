@@ -52,5 +52,6 @@ func (self *About) Cmd() cli.Command {
 }
 
 func (self *About) Run(ctx *gpm.Ctx) {
+	ctx.Debug("about")
 	ctx.Puts(aboutMessage)
 }

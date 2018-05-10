@@ -17,6 +17,7 @@ func (self *Remove) Cmd() cli.Command {
 }
 
 func (self *Remove) Run(ctx *gpm.Ctx) {
+	ctx.Debug("Remove")
 }
 
 // Remove removes a dependncy from the configuration.
