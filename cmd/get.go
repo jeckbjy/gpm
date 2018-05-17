@@ -37,39 +37,26 @@ func (self *Get) Cmd() cli.Command {
 	}
 }
 
+// Run 添加并下载某个repo
 func (self *Get) Run(ctx *gpm.Ctx) {
-	ctx.Debug("get")
-	ctx.Load()
-	for _, name := range ctx.Args() {
-		ctx.Conf.AddDependency(name)
+	if len(ctx.Args()) != 1 {
+		ctx.Die("get need just one repo!")
 	}
 
+	ctx.Load()
+
+	name := ctx.Args()[0]
+
+	dep, err := ctx.Conf.NewDependency(name)
+	if err != nil {
+		ctx.Info("%+v", err)
+		return
+	}
+
+	if err := ctx.Get(dep); err != nil {
+		ctx.Die("%+v", err)
+	}
+
+	ctx.Conf.AddDependency(dep)
 	ctx.Conf.Save()
-
-	// get and update??
 }
-
-// Get 获取代码
-// func Get(names []string) {
-
-// 	// remote := "https://github.com/Masterminds/vcs"
-// 	// // local, _ := ioutil.TempDir("", "go-vcs")
-// 	// local := "aa"
-// 	// repo, err := vcs.NewRepo(remote, local)
-// 	// msg.Info("get data:%+v", local)
-
-// 	// if err != nil {
-// 	// 	msg.Die("bad repo:%+v", err)
-// 	// 	return
-// 	// }
-
-// 	// repo.Get()
-
-// 	// repo.ExportDir("github.com/Masterminds/vcs")
-
-// 	// EnsureVendor()
-
-// 	// base := conf.BasePath()
-// 	// EnsureVendorDir()
-// 	// conf := EnsureConfig()
-// }

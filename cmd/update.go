@@ -17,6 +17,13 @@ func (self *Update) Cmd() cli.Command {
 	}
 }
 
+// Run update all deps and update lock file
 func (self *Update) Run(ctx *gpm.Ctx) {
-	ctx.Debug("Update")
+	ctx.Load()
+
+	for _, dep := range ctx.Conf.Imports {
+		if err := ctx.Get(dep); err != nil {
+			ctx.Die("%+v", err)
+		}
+	}
 }

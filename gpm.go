@@ -42,7 +42,7 @@ func main() {
 			ctx := gpm.NewCtx()
 			ctx.Context = cliCtx
 
-			ctx.Debug("run cmd:%+s", cliCtx.Command.Name)
+			// ctx.Debug("run cmd:%+s", cliCtx.Command.Name)
 			action.Run(ctx)
 			return nil
 		}

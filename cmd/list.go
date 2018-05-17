@@ -16,6 +16,14 @@ func (self *List) Cmd() cli.Command {
 	}
 }
 
+// Run list all dependency
 func (self *List) Run(ctx *gpm.Ctx) {
+	ctx.Load()
 
+	if len(ctx.Conf.Imports) > 0 {
+		ctx.Puts("imports:")
+		for _, dep := range ctx.Conf.Imports {
+			ctx.Puts("  - %+v", dep.Name)
+		}
+	}
 }

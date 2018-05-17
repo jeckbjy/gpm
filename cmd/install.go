@@ -17,6 +17,18 @@ func (self *Install) Cmd() cli.Command {
 	}
 }
 
+// Run install all deps
 func (self *Install) Run(ctx *gpm.Ctx) {
+	if len(ctx.Args()) != 0 {
+		ctx.Die("install donot need args")
+	}
 
+	ctx.Load()
+
+	// get all
+	for _, dep := range ctx.Conf.Imports {
+		if err := ctx.Get(dep); err != nil {
+			ctx.Die("%+v", err)
+		}
+	}
 }

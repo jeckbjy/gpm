@@ -16,11 +16,8 @@ func (self *Name) Cmd() cli.Command {
 	}
 }
 
+// Run return name from config
 func (self *Name) Run(ctx *gpm.Ctx) {
+	ctx.Load()
+	ctx.Puts(ctx.Conf.Name)
 }
-
-// Name prints the name of the package, according to the config file.
-// func Name() {
-// 	// cfg := EnsureConfig()
-// 	// msg.Puts(cfg.Name)
-// }

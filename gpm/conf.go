@@ -1,6 +1,7 @@
 package gpm
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -26,21 +27,12 @@ type Owner struct {
 // Dependency describes a package that the present package depends upon.
 type Dependency struct {
 	Name       string   `yaml:"package"`
-	Version    string   `yaml:"version,omitempty"` // Version
-	Pin        string   `yaml:"-"`                 // Version fot lock
+	Version    string   `yaml:"version,omitempty"` // semantic version Semver
+	Pin        string   `yaml:"-"`                 // Version for lock
 	Repository string   `yaml:"repo,omitempty"`
-	VCS        string   `yaml:"vcs,omitempty"`
+	Vcs        string   `yaml:"vcs,omitempty"`
 	Arch       []string `yaml:"arch,omitempty"`
 	Os         []string `yaml:"os,omitempty"`
-}
-
-// Parse name and version
-func (d *Dependency) Parse() {
-	parts := strings.Split(d.Name, "#")
-	if len(parts) > 1 {
-		d.Name = parts[0]
-		d.Version = parts[1]
-	}
 }
 
 // Remote returns the remote location to fetch source from. This location is
@@ -60,8 +52,9 @@ func (d *Dependency) Remote() string {
 // Config is the top-level configuration object.
 type Config struct {
 	Name    string        `yaml:"package"`
+	Version string        `yaml:"version"`
+	Home    string        `yaml:"home,omitempty"`
 	Desc    string        `yaml:"description,omitempty"`
-	Home    string        `yaml:"homepage,omitempty"`
 	License string        `yaml:"license,omitempty"`
 	Owners  []*Owner      `yaml:"owners,omitempty"`
 	Imports []*Dependency `yaml:"import"`
@@ -77,6 +70,7 @@ func NewConfig() *Config {
 // Init 初始化
 func (cfg *Config) Init() {
 	cfg.Name = "."
+	cfg.Version = "0.0.0"
 }
 
 func (cfg *Config) SetPath(dir string) {
@@ -110,9 +104,9 @@ func (cfg *Config) Load() error {
 		return err
 	}
 
-	// parse name and version
+	// try fix name and version
 	for _, dep := range cfg.Imports {
-		dep.Parse()
+		dep.Name, dep.Version = cfg.ParseRepo(dep.Name)
 	}
 
 	return nil
@@ -129,6 +123,16 @@ func (cfg *Config) Save() error {
 	return ioutil.WriteFile(filename, data, 0666)
 }
 
+// ParseRepo 解析版本号,例如:github.com/jeckbjy/fairy@^2.0.1
+func (cfg *Config) ParseRepo(repo string) (string, string) {
+	tokens := strings.Split(repo, "@")
+	if len(tokens) > 1 {
+		return tokens[0], tokens[1]
+	}
+
+	return repo, ""
+}
+
 // HasDependency returns true if the given name is listed as an import or dev import.
 func (cfg *Config) HasDependency(name string) bool {
 	for _, d := range cfg.Imports {
@@ -140,15 +144,46 @@ func (cfg *Config) HasDependency(name string) bool {
 	return false
 }
 
-// AddDependency returns true if the given name is listed as an import or dev import.
-func (cfg *Config) AddDependency(name string) bool {
-	if cfg.HasDependency(name) {
-		return false
+// DelDependency delete
+func (cfg *Config) DelDependency(name string) bool {
+	for i, d := range cfg.Imports {
+		if d.Name == name {
+			cfg.Imports = append(cfg.Imports[:i], cfg.Imports[i+1:]...)
+			return true
+		}
 	}
 
-	dep := &Dependency{Name: name}
-	dep.Parse()
-	cfg.Imports = append(cfg.Imports, dep)
+	return false
+}
 
-	return true
+// AddDependency add dependency to imports or dev
+func (cfg *Config) AddDependency(dep *Dependency) {
+	if !cfg.HasDependency(dep.Name) {
+		cfg.Imports = append(cfg.Imports, dep)
+	}
+}
+
+// NewDependency create Dependency if not exist
+func (cfg *Config) NewDependency(name string) (*Dependency, error) {
+	//
+	name, version := cfg.ParseRepo(name)
+	// try remove https://, git
+	repo := ""
+	if index := strings.Index(name, "://"); index != -1 {
+		repo = name
+		begIndex := index + 3
+		endIndex := strings.LastIndex(name, ".")
+		if endIndex == -1 {
+			name = name[begIndex:]
+		} else {
+			name = name[begIndex:endIndex]
+		}
+	}
+
+	if cfg.HasDependency(name) {
+		return nil, fmt.Errorf("dependency has exist: %+v", name)
+	}
+
+	dep := &Dependency{Name: name, Version: version, Repository: repo}
+	return dep, nil
 }
