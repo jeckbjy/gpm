@@ -58,7 +58,6 @@ type Config struct {
 	License string        `yaml:"license,omitempty"`
 	Owners  []*Owner      `yaml:"owners,omitempty"`
 	Imports []*Dependency `yaml:"import"`
-	Path    string        `yaml:"-"` // 配置文件所在目录
 }
 
 func NewConfig() *Config {
@@ -69,20 +68,11 @@ func NewConfig() *Config {
 
 // Init 初始化
 func (cfg *Config) Init() {
-	cfg.Name = "."
 	cfg.Version = "0.0.0"
 }
 
-func (cfg *Config) SetPath(dir string) {
-	if !strings.HasSuffix(dir, "/") {
-		cfg.Path = dir + "/"
-	} else {
-		cfg.Path = dir
-	}
-}
-
 func (cfg *Config) ConfigPath() string {
-	return cfg.Path + ConfName
+	return ConfName
 }
 
 // Exist 判断配置文件是否存在
@@ -119,7 +109,7 @@ func (cfg *Config) Save() error {
 		return err
 	}
 
-	filename := cfg.Path + ConfName
+	filename := ConfName
 	return ioutil.WriteFile(filename, data, 0666)
 }
 
