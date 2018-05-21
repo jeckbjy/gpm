@@ -53,7 +53,7 @@ func (self *Get) Run(ctx *gpm.Ctx) {
 		return
 	}
 
-	if err := ctx.Get(dep); err != nil {
+	if err := ctx.Get(dep, true); err != nil {
 		ctx.Die("%+v", err)
 	}
 

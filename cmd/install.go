@@ -27,7 +27,7 @@ func (self *Install) Run(ctx *gpm.Ctx) {
 
 	// get all
 	for _, dep := range ctx.Conf.Imports {
-		if err := ctx.Get(dep); err != nil {
+		if err := ctx.Get(dep, false); err != nil {
 			ctx.Die("%+v", err)
 		}
 	}
