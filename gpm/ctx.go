@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/Masterminds/semver"
 
 	"github.com/Masterminds/vcs"
 	"github.com/codegangsta/cli"
@@ -135,6 +139,72 @@ func (ctx *Ctx) Load() {
 	}
 
 	ctx.Conf.Load()
+}
+
+// UpdateVersion 查找版本
+func (ctx *Ctx) UpdateVersion(dep *Dependency, repo vcs.Repo) error {
+	ver := dep.Version
+	// References in Git can begin with a ^ which is similar to semver.
+	// If there is a ^ prefix we assume it's a semver constraint rather than
+	// part of the git/VCS commit id.
+	if repo.IsReference(ver) && !strings.HasPrefix(ver, "^") {
+		return nil
+	}
+
+	constraint, err := semver.NewConstraint(ver)
+	if err != nil {
+		return err
+	}
+
+	// Get the tags and branches (in that order)
+	refs := []string{}
+
+	if tags, err := repo.Tags(); err == nil {
+		refs = append(refs, tags...)
+	} else {
+		return err
+	}
+
+	if branches, err := repo.Branches(); err == nil {
+		refs = append(refs, branches...)
+	} else {
+		return err
+	}
+
+	// Convert and filter the list to semver.Version instances
+	semvers := []*semver.Version{}
+	for _, ref := range refs {
+		v, err := semver.NewVersion(ref)
+		if err == nil {
+			semvers = append(semvers, v)
+		}
+	}
+
+	// Sort semver list
+	sort.Sort(sort.Reverse(semver.Collection(semvers)))
+
+	found := ""
+	for _, v := range semvers {
+		if constraint.Check(v) {
+			found = v.Original()
+		}
+	}
+
+	//
+	if found == "" {
+		return nil
+	}
+
+	if err := repo.UpdateVersion(found); err != nil {
+		return err
+	}
+
+	dep.VersionLock, err = repo.Version()
+	if err != nil {
+		return nil
+	}
+
+	return nil
 }
 
 // Get download one dependency to vendor

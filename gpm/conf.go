@@ -26,13 +26,13 @@ type Owner struct {
 
 // Dependency describes a package that the present package depends upon.
 type Dependency struct {
-	Name       string   `yaml:"package"`
-	Version    string   `yaml:"version,omitempty"` // semantic version Semver
-	Pin        string   `yaml:"-"`                 // Version for lock
-	Repository string   `yaml:"repo,omitempty"`
-	Vcs        string   `yaml:"vcs,omitempty"`
-	Arch       []string `yaml:"arch,omitempty"`
-	Os         []string `yaml:"os,omitempty"`
+	Name        string   `yaml:"package"`
+	Version     string   `yaml:"version,omitempty"` // semantic version(Semver)
+	VersionLock string   `yaml:"-"`                 // Version for lock
+	Repository  string   `yaml:"repo,omitempty"`
+	Vcs         string   `yaml:"vcs,omitempty"`
+	Arch        []string `yaml:"arch,omitempty"`
+	Os          []string `yaml:"os,omitempty"`
 }
 
 // Remote returns the remote location to fetch source from. This location is
