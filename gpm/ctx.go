@@ -2,6 +2,7 @@ package gpm
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,12 @@ import (
 
 	"github.com/Masterminds/vcs"
 	"github.com/codegangsta/cli"
+)
+
+const (
+	GetModeInit = iota
+	GetModeUpdate
+	GetModeInstall
 )
 
 // Ctx defines the supporting context
@@ -44,7 +51,7 @@ func (ctx *Ctx) init() {
 
 	home, _ := Home()
 	ctx.HomeDir = home
-	ctx.CacheDir = filepath.Join(".gpm", "cache")
+	ctx.CacheDir = filepath.Join(".gpm")
 	ctx.WorkDir = wd
 	ctx.VendorDir = filepath.Join("vendor")
 }
@@ -195,7 +202,6 @@ func (ctx *Ctx) UpdateVersion(dep *Dependency, repo vcs.Repo) error {
 	}
 
 	if found != dep.VersionLock {
-		ctx.Debug("update lock version:%+v", found)
 		dep.VersionLock = found
 	}
 
@@ -278,37 +284,92 @@ func (ctx *Ctx) GetAllRefs(repo vcs.Repo) ([]string, error) {
 // GetOrUpdateRepo 获取或者更新repo
 func (ctx *Ctx) GetOrUpdateRepo(repo vcs.Repo) error {
 	if !Exists(repo.LocalPath()) {
-		ctx.Debug("get repo:%+v", repo.Remote())
 		return repo.Get()
 	}
 
-	ctx.Debug("udpate repo:%+v", repo.Remote())
 	return repo.Update()
 }
 
+// scpSyntaxRe matches the SCP-like addresses used to access repos over SSH.
+var scpSyntaxRe = regexp.MustCompile(`^([a-zA-Z0-9_]+)@([a-zA-Z0-9._-]+):(.*)$`)
+
+// GetCacheLocal 返回一个cache地址
+func (ctx *Ctx) GetCacheLocal(repo string) (string, error) {
+	var u *url.URL
+	var err error
+	var strip bool
+	if m := scpSyntaxRe.FindStringSubmatch(repo); m != nil {
+		// Match SCP-like syntax and convert it to a URL.
+		// Eg, "git@github.com:user/repo" becomes
+		// "ssh://git@github.com/user/repo".
+		u = &url.URL{
+			Scheme: "ssh",
+			User:   url.User(m[1]),
+			Host:   m[2],
+			Path:   "/" + m[3],
+		}
+		strip = true
+	} else {
+		u, err = url.Parse(repo)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if strip {
+		u.Scheme = ""
+	}
+
+	var key string
+	if u.Scheme != "" {
+		key = u.Scheme + "-"
+	}
+	if u.User != nil && u.User.Username() != "" {
+		key = key + u.User.Username() + "-"
+	}
+	key = key + u.Host
+	if u.Path != "" {
+		key = key + strings.Replace(u.Path, "/", "-", -1)
+	}
+
+	key = strings.Replace(key, ":", "-", -1)
+
+	return filepath.Join(ctx.CacheDir, key), nil
+}
+
 // Get download one dependency to vendor
-func (ctx *Ctx) Get(dep *Dependency, update bool) error {
+func (ctx *Ctx) Get(dep *Dependency, mode int) error {
 	// checkout repo to cache
-	local := filepath.Join(ctx.CacheDir, dep.Name)
+	local, err := ctx.GetCacheLocal(dep.Name)
+	if err != nil {
+		return err
+	}
+
 	repo, err := vcs.NewRepo(dep.Remote(), local)
 	if err != nil {
 		return fmt.Errorf("repo create fail:%+v, %+v", dep.Name, err)
 	}
+
+	oldVersion, _ := repo.Current()
 
 	ctx.Info("--> Fetching %s", dep.Name)
 	if err := ctx.GetOrUpdateRepo(repo); err != nil {
 		return fmt.Errorf("update repo fail:%+v", err)
 	}
 
-	if update {
+	// 自动获取Semantic Version
+	if mode == GetModeInit {
 		if dep.Version == "" {
 			ctx.UpdateSemver(dep, repo)
-		} else {
-			ctx.UpdateVersion(dep, repo)
 		}
 	}
 
-	// udpate lock version
+	// 查找合适的版本
+	if mode == GetModeInit || mode == GetModeUpdate {
+		ctx.UpdateVersion(dep, repo)
+	}
+
+	// 更新到合适的版本
 	if dep.VersionLock != "" {
 		needed := true
 		if cur, err := repo.Current(); err == nil {
@@ -325,10 +386,12 @@ func (ctx *Ctx) Get(dep *Dependency, update bool) error {
 		}
 	}
 
+	// TODO:记录版本信息
 	// export if not exist or not same version(TODO)
 	relDir := filepath.Join(ctx.VendorDir, dep.Name)
 	absDir, _ := filepath.Abs(relDir)
-	if !Exists(absDir) {
+	curVersion, _ := repo.Current()
+	if oldVersion != curVersion || !Exists(absDir) {
 		ctx.Info("--> Export %s, %s", dep.Name, relDir)
 		if err := repo.ExportDir(absDir); err != nil {
 			return fmt.Errorf("repo export fail:%+v", err)

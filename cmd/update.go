@@ -22,7 +22,7 @@ func (self *Update) Run(ctx *gpm.Ctx) {
 	ctx.Load()
 
 	for _, dep := range ctx.Conf.Imports {
-		if err := ctx.Get(dep, true); err != nil {
+		if err := ctx.Get(dep, gpm.GetModeUpdate); err != nil {
 			ctx.Die("%+v", err)
 		}
 	}
