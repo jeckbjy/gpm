@@ -76,5 +76,5 @@ func (self *Create) Run(ctx *gpm.Ctx) {
 	}
 
 	ctx.Info("Writing configuration:%+v", dir)
-	ctx.Conf.Save()
+	ctx.Save()
 }

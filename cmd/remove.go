@@ -41,7 +41,7 @@ func (self *Remove) Run(ctx *gpm.Ctx) {
 	// os.RemoveAll(cache)
 
 	// remove from vendor
-	removeAll(ctx.VendorDir, name)
+	removeAll(ctx.VendorDir(), name)
 	// vendor := filepath.Join(ctx.VendorDir, name)
 	// os.RemoveAll(vendor)
 
@@ -50,7 +50,7 @@ func (self *Remove) Run(ctx *gpm.Ctx) {
 
 	// TODO: remove empty dir
 
-	ctx.Conf.Save()
+	ctx.Save()
 }
 
 // 递归向上删除所有空文件夹

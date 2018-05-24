@@ -58,5 +58,5 @@ func (self *Get) Run(ctx *gpm.Ctx) {
 	}
 
 	ctx.Conf.AddDependency(dep)
-	ctx.Conf.Save()
+	ctx.Save()
 }

@@ -26,13 +26,13 @@ type Owner struct {
 
 // Dependency describes a package that the present package depends upon.
 type Dependency struct {
-	Name        string   `yaml:"package"`
-	Version     string   `yaml:"version,omitempty"` // semantic version(Semver)
-	VersionLock string   `yaml:"-"`                 // Version for lock
-	Repository  string   `yaml:"repo,omitempty"`
-	Vcs         string   `yaml:"vcs,omitempty"`
-	Arch        []string `yaml:"arch,omitempty"`
-	Os          []string `yaml:"os,omitempty"`
+	Name       string   `yaml:"package"`
+	Version    string   `yaml:"version,omitempty"` // semantic version(Semver)
+	Reversion  string   `yaml:"-"`                 // Version for lock
+	Repository string   `yaml:"repo,omitempty"`
+	Vcs        string   `yaml:"vcs,omitempty"`
+	Arch       []string `yaml:"arch,omitempty"`
+	Os         []string `yaml:"os,omitempty"`
 }
 
 // Remote returns the remote location to fetch source from. This location is
@@ -53,6 +53,7 @@ func (d *Dependency) Remote() string {
 type Config struct {
 	Name    string        `yaml:"package"`
 	Version string        `yaml:"version"`
+	Vendor  string        `yaml:"vendor,omitempty"`
 	Home    string        `yaml:"home,omitempty"`
 	Desc    string        `yaml:"description,omitempty"`
 	License string        `yaml:"license,omitempty"`
@@ -176,4 +177,33 @@ func (cfg *Config) NewDependency(name string) (*Dependency, error) {
 
 	dep := &Dependency{Name: name, Version: version, Repository: repo}
 	return dep, nil
+}
+
+func (cfg *Config) findDependency(deps []*Dependency, name string) *Dependency {
+	for _, dep := range deps {
+		if dep.Name == name {
+			return dep
+		}
+	}
+
+	return nil
+}
+
+// ImportLock 从lock文件导入
+func (cfg *Config) ImportLock(l *LockFile) {
+	for _, ldep := range l.Imports {
+		cdep := cfg.findDependency(cfg.Imports, ldep.Name)
+		if cdep != nil {
+			cdep.Reversion = ldep.Reversion
+		}
+	}
+}
+
+// ExportLock 导出lock文件
+func (cfg *Config) ExportLock(l *LockFile) {
+	l.Imports = l.Imports[:0]
+	for _, dep := range cfg.Imports {
+		ldep := &Lock{Name: dep.Name, Reversion: dep.Reversion}
+		l.Imports = append(l.Imports, ldep)
+	}
 }

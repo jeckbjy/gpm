@@ -22,16 +22,15 @@ const (
 	GetModeInstall
 )
 
-// Ctx defines the supporting context
+// Ctx 工作上下文，所有的操作都是相对于配置文件所在的目录设置的
 type Ctx struct {
 	*cli.Context
 	*Logger
-	Conf      *Config
-	HomeDir   string
-	CacheDir  string
-	WorkDir   string
-	VendorDir string
-	gopath    string
+	Conf     *Config
+	HomeDir  string
+	CacheDir string
+	WorkDir  string
+	gopath   string
 }
 
 // NewCtx create context
@@ -51,9 +50,8 @@ func (ctx *Ctx) init() {
 
 	home, _ := Home()
 	ctx.HomeDir = home
-	ctx.CacheDir = filepath.Join(".gpm")
+	ctx.CacheDir = filepath.Join(home, ".gpm")
 	ctx.WorkDir = wd
-	ctx.VendorDir = filepath.Join("vendor")
 }
 
 // GoPath 查找可能的GOPATH
@@ -64,6 +62,19 @@ func (ctx *Ctx) GoPath() string {
 
 	ctx.gopath = ctx.findGoPath()
 	return ctx.gopath
+}
+
+// VendorDir 默认和配置同级目录,可以在配置中修改
+func (ctx *Ctx) VendorDir() string {
+	if ctx.Conf.Vendor != "" {
+		if strings.HasSuffix(ctx.Conf.Vendor, "/vendor") {
+			return ctx.Conf.Vendor
+		} else {
+			return filepath.Join(ctx.Conf.Vendor, "vendor")
+		}
+	}
+
+	return "vendor"
 }
 
 // FindGoPath 尝试查找gopath
@@ -148,7 +159,31 @@ func (ctx *Ctx) Load() {
 		ctx.Die("can not load cfg:%+v", ctx.Conf.ConfigPath())
 	}
 
-	ctx.Conf.Load()
+	if err := ctx.Conf.Load(); err != nil {
+		ctx.Die("load config fail:%+v", err)
+	}
+
+	if !Exists(LockName) {
+		return
+	}
+
+	lockfile := &LockFile{}
+	if err := lockfile.Load(); err != nil {
+		ctx.Die("load lock fail:%+v", err)
+	}
+
+	ctx.Conf.ImportLock(lockfile)
+}
+
+// Save 保存配置文件和lock文件
+func (ctx *Ctx) Save() {
+	ctx.Conf.Save()
+
+	if len(ctx.Conf.Imports) > 0 || Exists(LockName) {
+		l := &LockFile{}
+		ctx.Conf.ExportLock(l)
+		l.Save()
+	}
 }
 
 // UpdateVersion 查找版本
@@ -201,8 +236,8 @@ func (ctx *Ctx) UpdateVersion(dep *Dependency, repo vcs.Repo) error {
 		return err
 	}
 
-	if found != dep.VersionLock {
-		dep.VersionLock = found
+	if found != dep.Reversion {
+		dep.Reversion = found
 	}
 
 	return nil
@@ -260,7 +295,7 @@ func (ctx *Ctx) UpdateSemver(dep *Dependency, repo vcs.Repo) error {
 		dep.Version = lastVersion
 	}
 
-	dep.VersionLock = lastVersion
+	dep.Reversion = lastVersion
 
 	return nil
 }
@@ -370,15 +405,15 @@ func (ctx *Ctx) Get(dep *Dependency, mode int) error {
 	}
 
 	// 更新到合适的版本
-	if dep.VersionLock != "" {
+	if dep.Reversion != "" {
 		needed := true
 		if cur, err := repo.Current(); err == nil {
-			needed = cur != dep.VersionLock
+			needed = cur != dep.Reversion
 		}
 
 		if needed {
-			ctx.Info("update version:%+v", dep.VersionLock)
-			if err := repo.UpdateVersion(dep.VersionLock); err != nil {
+			ctx.Info("update version:%+v", dep.Reversion)
+			if err := repo.UpdateVersion(dep.Reversion); err != nil {
 				ctx.Info("update version fail:%+v", err)
 			} else {
 				repo.Update()
@@ -388,7 +423,7 @@ func (ctx *Ctx) Get(dep *Dependency, mode int) error {
 
 	// TODO:记录版本信息
 	// export if not exist or not same version(TODO)
-	relDir := filepath.Join(ctx.VendorDir, dep.Name)
+	relDir := filepath.Join(ctx.VendorDir(), dep.Name)
 	absDir, _ := filepath.Abs(relDir)
 	curVersion, _ := repo.Current()
 	if oldVersion != curVersion || !Exists(absDir) {
