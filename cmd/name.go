@@ -18,6 +18,6 @@ func (self *Name) Cmd() cli.Command {
 
 // Run return name from config
 func (self *Name) Run(ctx *gpm.Ctx) {
-	ctx.Load()
-	ctx.Puts(ctx.Conf.Name)
+	ctx.MustLoad()
+	ctx.Puts(ctx.Name)
 }

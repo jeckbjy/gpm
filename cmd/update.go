@@ -19,10 +19,10 @@ func (self *Update) Cmd() cli.Command {
 
 // Run update all deps and update lock file
 func (self *Update) Run(ctx *gpm.Ctx) {
-	ctx.Load()
+	ctx.MustLoad()
 
-	for _, dep := range ctx.Conf.Imports {
-		if err := ctx.Get(dep, gpm.GetModeUpdate); err != nil {
+	for _, dep := range ctx.Imports {
+		if err := ctx.Get(dep.Remote(), dep.Version); err != nil {
 			ctx.Die("%+v", err)
 		}
 	}

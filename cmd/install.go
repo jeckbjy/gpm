@@ -23,11 +23,11 @@ func (self *Install) Run(ctx *gpm.Ctx) {
 		ctx.Die("install donot need args")
 	}
 
-	ctx.Load()
+	ctx.MustLoad()
 
 	// get all
-	for _, dep := range ctx.Conf.Imports {
-		if err := ctx.Get(dep, gpm.GetModeInstall); err != nil {
+	for _, dep := range ctx.Imports {
+		if err := ctx.Get(dep.Remote(), dep.Version); err != nil {
 			ctx.Die("%+v", err)
 		}
 	}

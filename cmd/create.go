@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/codegangsta/cli"
 	"github.com/jeckbjy/gpm/gpm"
 )
@@ -27,54 +23,59 @@ func (self *Create) Cmd() cli.Command {
 	}
 }
 
+// 在当前目录创建gpm.yaml
 func (self *Create) Run(ctx *gpm.Ctx) {
 	if len(ctx.Args()) > 1 {
 		ctx.Die("don't support")
 		return
 	}
 
-	if len(ctx.Args()) == 1 {
-		// 在子目录创建 src/xxx/xxx
-		name := ctx.Args()[0]
-		if strings.HasPrefix(name, "src/") {
-			name = name[4:]
-		}
+	// if len(ctx.Args()) == 1 {
+	// 	// 在子目录创建 src/xxx/xxx
+	// 	name := ctx.Args()[0]
+	// 	if strings.HasPrefix(name, "src/") {
+	// 		name = name[4:]
+	// 	}
 
-		dir := name
-		if filepath.Base(ctx.WorkDir) != "src" {
-			dir = filepath.Join("src", name)
-		}
+	// 	dir := name
+	// 	if filepath.Base(ctx.WorkDir) != "src" {
+	// 		dir = filepath.Join("src", name)
+	// 	}
 
-		if gpm.Exists(dir) {
-			ctx.Die("folder exists:%+v", dir)
-		}
+	// 	if gpm.Exists(dir) {
+	// 		ctx.Die("folder exists:%+v", dir)
+	// 	}
 
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			ctx.Die("can not create path")
-		}
+	// 	if err := os.MkdirAll(dir, 0755); err != nil {
+	// 		ctx.Die("can not create path")
+	// 	}
 
-		// 修改工作目录
-		if wd, err := filepath.Abs(dir); err == nil {
-			ctx.SetWorkDir(wd)
-		} else {
-			ctx.Die("change work dir fail:%+v", dir)
-		}
+	// 	// 修改工作目录
+	// 	if wd, err := filepath.Abs(dir); err == nil {
+	// 		ctx.SetWorkDir(wd)
+	// 	} else {
+	// 		ctx.Die("change work dir fail:%+v", dir)
+	// 	}
 
-		ctx.Conf.Name = name
-	} else {
-		// 在当前目录创建
-		if ctx.Conf.Exist() {
-			ctx.Die("Cowardly refusing to overwrite existing YAML.")
-		}
+	// 	ctx.Conf.Name = name
+	// } else {
+	// 	// 在当前目录创建
+	// 	if ctx.Conf.Exist() {
+	// 		ctx.Die("Cowardly refusing to overwrite existing YAML.")
+	// 	}
 
-		ctx.Conf.Name = filepath.Base(ctx.WorkDir)
+	// 	ctx.Conf.Name = filepath.Base(ctx.WorkDir)
+	// }
+
+	// dir, err := filepath.Rel(ctx.GoPath(), ctx.WorkDir)
+	// if err != nil {
+	// 	ctx.Die("cannot parse dir:%+v", err)
+	// }
+
+	if ctx.Exist() {
+		ctx.Die("Cowardly refusing to overwrite existing YAML.")
 	}
 
-	dir, err := filepath.Rel(ctx.GoPath(), ctx.WorkDir)
-	if err != nil {
-		ctx.Die("cannot parse dir:%+v", err)
-	}
-
-	ctx.Info("Writing configuration:%+v", dir)
+	ctx.Info("Writing configuration gpm.yaml")
 	ctx.Save()
 }

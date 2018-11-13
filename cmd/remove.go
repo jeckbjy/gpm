@@ -26,10 +26,10 @@ func (self *Remove) Run(ctx *gpm.Ctx) {
 		ctx.Die("remove need just one repo!")
 	}
 
-	ctx.Load()
+	ctx.MustLoad()
 
 	name := ctx.Args()[0]
-	if !ctx.Conf.DelDependency(name) {
+	if !ctx.DelDependency(name) {
 		ctx.Die("cannot find dependency:%+v", name)
 	}
 
@@ -41,7 +41,7 @@ func (self *Remove) Run(ctx *gpm.Ctx) {
 	// os.RemoveAll(cache)
 
 	// remove from vendor
-	removeAll(ctx.VendorDir(), name)
+	removeAll("/vendor", name)
 	// vendor := filepath.Join(ctx.VendorDir, name)
 	// os.RemoveAll(vendor)
 
